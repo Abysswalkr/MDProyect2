@@ -1,0 +1,2 @@
+# MDProyect2
+ El proyecto consiste en desarrollar modelos de regresión lineal para predecir el precio de viviendas utilizando el dataset "House Prices: Advanced Regression Techniques" de Kaggle. Se realizará un análisis exploratorio de las variables clave, como ubicación, tamaño y calidad de las propiedades, y evaluará varios modelos de regresión para seleccionar el más preciso. El objetivo es mejorar la estimación de valores inmobiliarios y facilitar la toma de decisiones estratégicas en el mercado de bienes raíces.
