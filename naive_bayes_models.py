@@ -130,16 +130,25 @@ def naive_bayes_classification(X_train, X_test, y_train, y_test, var_smoothing=1
     cr : string
         Reporte de clasificación
     """
+    # Eliminar filas con valores NaN
+    mask = ~(X_train.isna().any(axis=1) | y_train.isna())
+    X_train_clean = X_train[mask]
+    y_train_clean = y_train[mask]
+    
+    mask_test = ~(X_test.isna().any(axis=1) | y_test.isna())
+    X_test_clean = X_test[mask_test]
+    y_test_clean = y_test[mask_test]
+    
     # Crear y entrenar el modelo
     model = GaussianNB(var_smoothing=var_smoothing)
-    model.fit(X_train, y_train)
+    model.fit(X_train_clean, y_train_clean)
     
     # Hacer predicciones
-    y_pred = model.predict(X_test)
+    y_pred = model.predict(X_test_clean)
     
     # Calcular métricas
-    cm = confusion_matrix(y_test, y_pred)
-    cr = classification_report(y_test, y_pred)
+    cm = confusion_matrix(y_test_clean, y_pred)
+    cr = classification_report(y_test_clean, y_pred)
     
     # Mostrar resultados
     print(f"Naive Bayes Clasificación (var_smoothing={var_smoothing}):")
@@ -224,7 +233,7 @@ def tune_naive_bayes_regression(X_train, X_test, y_train, y_test):
     
     # Graficar heatmap de hiperparámetros
     if len(n_bins_range) > 1 and len(var_smoothing_range) > 1:
-        pivot_rmse = results_df.pivot('n_bins', 'var_smoothing', 'rmse')
+        pivot_rmse = results_df.pivot(index='n_bins', columns='var_smoothing', values='rmse')
         plt.figure(figsize=(10, 8))
         sns.heatmap(pivot_rmse, annot=True, fmt='.2f', cmap='viridis_r')
         plt.title('RMSE por Hiperparámetros - Naive Bayes Regresión')
@@ -254,6 +263,15 @@ def tune_naive_bayes_classification(X_train, X_test, y_train, y_test):
     best_cr : string
         Reporte de clasificación para el mejor modelo
     """
+    # Eliminar filas con valores NaN
+    mask = ~(X_train.isna().any(axis=1) | y_train.isna())
+    X_train_clean = X_train[mask]
+    y_train_clean = y_train[mask]
+    
+    mask_test = ~(X_test.isna().any(axis=1) | y_test.isna())
+    X_test_clean = X_test[mask_test]
+    y_test_clean = y_test[mask_test]
+    
     # Definir grid de hiperparámetros
     param_grid = {
         'var_smoothing': np.logspace(-11, -1, 11)
@@ -267,16 +285,16 @@ def tune_naive_bayes_classification(X_train, X_test, y_train, y_test):
         model, param_grid, cv=5, 
         scoring='accuracy', n_jobs=-1, verbose=1
     )
-    grid_search.fit(X_train, y_train)
+    grid_search.fit(X_train_clean, y_train_clean)
     
     # Obtener mejor modelo
     best_model = grid_search.best_estimator_
     best_params = grid_search.best_params_
     
     # Evaluar mejor modelo
-    y_pred = best_model.predict(X_test)
-    best_cm = confusion_matrix(y_test, y_pred)
-    best_cr = classification_report(y_test, y_pred)
+    y_pred = best_model.predict(X_test_clean)
+    best_cm = confusion_matrix(y_test_clean, y_pred)
+    best_cr = classification_report(y_test_clean, y_pred)
     
     # Mostrar resultados
     print("Resultados del ajuste de hiperparámetros para Naive Bayes Clasificación:")
