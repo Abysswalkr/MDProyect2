@@ -104,7 +104,7 @@ def create_price_category(df, price_column='SalePrice'):
         (df[price_column] > 300000)
     ]
     choices = ['Económicas', 'Intermedias', 'Caras']
-    df['PriceCategory'] = np.select(conditions, choices)
+    df['PriceCategory'] = pd.Series(np.select(conditions, choices, default='Desconocido'), dtype='object')
     return df
 
 
@@ -148,12 +148,21 @@ def decision_tree_regression(X_train, X_test, y_train, y_test, max_depth=None):
 
 def decision_tree_classifier(X_train, X_test, y_train, y_test, max_depth=None):
     """Ajusta un árbol de decisión para clasificación usando PriceCategory y muestra matriz de confusión y árbol."""
+    # Eliminar filas con valores NaN
+    mask = ~(X_train.isna().any(axis=1) | y_train.isna())
+    X_train_clean = X_train[mask]
+    y_train_clean = y_train[mask]
+    
+    mask_test = ~(X_test.isna().any(axis=1) | y_test.isna())
+    X_test_clean = X_test[mask_test]
+    y_test_clean = y_test[mask_test]
+    
     dt_clf = DecisionTreeClassifier(max_depth=max_depth, random_state=42)
-    dt_clf.fit(X_train, y_train)
-    y_pred = dt_clf.predict(X_test)
+    dt_clf.fit(X_train_clean, y_train_clean)
+    y_pred = dt_clf.predict(X_test_clean)
 
-    cm = confusion_matrix(y_test, y_pred)
-    cr = classification_report(y_test, y_pred)
+    cm = confusion_matrix(y_test_clean, y_pred)
+    cr = classification_report(y_test_clean, y_pred)
 
     print(f"Árbol de Decisión Clasificador (max_depth={max_depth})")
     print("Matriz de Confusión:")
@@ -203,12 +212,21 @@ def random_forest_regression(X_train, X_test, y_train, y_test, n_estimators=100,
 
 def random_forest_classifier(X_train, X_test, y_train, y_test, n_estimators=100, max_depth=None):
     """Ajusta un modelo de Random Forest para clasificación y muestra matriz de confusión."""
+    # Eliminar filas con valores NaN
+    mask = ~(X_train.isna().any(axis=1) | y_train.isna())
+    X_train_clean = X_train[mask]
+    y_train_clean = y_train[mask]
+    
+    mask_test = ~(X_test.isna().any(axis=1) | y_test.isna())
+    X_test_clean = X_test[mask_test]
+    y_test_clean = y_test[mask_test]
+    
     rf_clf = RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth, random_state=42)
-    rf_clf.fit(X_train, y_train)
-    y_pred = rf_clf.predict(X_test)
+    rf_clf.fit(X_train_clean, y_train_clean)
+    y_pred = rf_clf.predict(X_test_clean)
 
-    cm = confusion_matrix(y_test, y_pred)
-    cr = classification_report(y_test, y_pred)
+    cm = confusion_matrix(y_test_clean, y_pred)
+    cr = classification_report(y_test_clean, y_pred)
 
     print(f"Random Forest Clasificador (n_estimators={n_estimators}, max_depth={max_depth})")
     print("Matriz de Confusión:")
