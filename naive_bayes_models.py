@@ -18,27 +18,38 @@ class GaussianNBRegressor:
         self.n_bins = n_bins
         self.var_smoothing = var_smoothing
         self.classifier = GaussianNB(var_smoothing=var_smoothing)
-        self.bin_edges = None
-        self.bin_centers = None
         
     def fit(self, X, y):
-        # Crear bins para la variable objetivo continua
-        self.bin_edges = np.linspace(y.min(), y.max(), self.n_bins + 1)
-        self.bin_centers = (self.bin_edges[:-1] + self.bin_edges[1:]) / 2
+        # Crear bins equidistantes
+        bin_edges = np.linspace(y.min(), y.max(), self.n_bins + 1)
         
-        # Convertir la variable objetivo continua a índices de bins
-        y_binned = np.digitize(y, self.bin_edges[1:-1])
+        # Asignar cada valor a un bin
+        y_binned = np.digitize(y, bin_edges[1:])
         
         # Entrenar el clasificador
         self.classifier.fit(X, y_binned)
+        
+        # Calcular los centros de bins para cada clase que el clasificador conoce
+        self.bin_means = {}
+        for bin_idx in np.unique(y_binned):
+            self.bin_means[bin_idx] = y[y_binned == bin_idx].mean()
+        
         return self
     
     def predict(self, X):
-        # Predecir probabilidades de bins
+        # Predecir probabilidades para cada clase
         proba = self.classifier.predict_proba(X)
         
-        # Calcular valor esperado basado en probabilidades de bins
-        y_pred = np.sum(proba * self.bin_centers.reshape(1, -1), axis=1)
+        # Inicializar array de predicciones
+        y_pred = np.zeros(X.shape[0])
+        
+        # Para cada muestra
+        for i in range(X.shape[0]):
+            # Para cada clase
+            for j, class_idx in enumerate(self.classifier.classes_):
+                # Sumar el valor medio del bin ponderado por su probabilidad
+                y_pred[i] += proba[i, j] * self.bin_means.get(class_idx, 0)
+        
         return y_pred
     
     def score(self, X, y):

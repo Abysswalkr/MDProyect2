@@ -15,6 +15,7 @@ from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, confusion_matrix, classification_report
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier, plot_tree
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+from naive_bayes_models import naive_bayes_regression, naive_bayes_classification, tune_naive_bayes_regression, tune_naive_bayes_classification, naive_bayes_cross_validation
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -669,6 +670,65 @@ def main():
         {'name': f'Árbol de Decisión (max_depth={best_depth})', 'rmse': best_dt_rmse, 'mae': best_dt_mae, 'r2': best_dt_r2},
         {'name': 'Random Forest', 'rmse': rf_rmse, 'mae': rf_mae, 'r2': rf_r2}
     ]
+    
+    # Escalar características para Naive Bayes
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+
+    # Convertir arrays escalados de nuevo a DataFrames
+    X_train_scaled = pd.DataFrame(X_train_scaled, columns=X_train.columns, index=X_train.index)
+    X_test_scaled = pd.DataFrame(X_test_scaled, columns=X_test.columns, index=X_test.index)
+
+    # Naive Bayes para Regresión
+    print("\n" + "=" * 50)
+    print("MODELOS DE NAIVE BAYES PARA REGRESIÓN")
+    print("=" * 50)
+    model_nb_reg, rmse_nb_reg, mae_nb_reg, r2_nb_reg = naive_bayes_regression(
+        X_train_scaled, X_test_scaled, y_train, y_test, n_bins=15, var_smoothing=1e-9
+    )
+
+    # Validación cruzada para Naive Bayes Regresión
+    cv_scores = naive_bayes_cross_validation(X, y, n_bins=15, var_smoothing=1e-9, cv=5)
+
+    # Ajuste de hiperparámetros para Naive Bayes Regresión
+    print("\n" + "=" * 50)
+    print("AJUSTE DE HIPERPARÁMETROS PARA NAIVE BAYES REGRESIÓN")
+    print("=" * 50)
+    best_nb_reg, best_rmse_nb_reg, best_mae_nb_reg, best_r2_nb_reg = tune_naive_bayes_regression(
+        X_train_scaled, X_test_scaled, y_train, y_test
+    )
+
+    # Escalar características para clasificación
+    X_train_clf_scaled = scaler.fit_transform(X_train_clf)
+    X_test_clf_scaled = scaler.transform(X_test_clf)
+
+    # Convertir arrays escalados de nuevo a DataFrames
+    X_train_clf_scaled = pd.DataFrame(X_train_clf_scaled, columns=X_train_clf.columns, index=X_train_clf.index)
+    X_test_clf_scaled = pd.DataFrame(X_test_clf_scaled, columns=X_test_clf.columns, index=X_test_clf.index)
+
+    # Naive Bayes para Clasificación
+    print("\n" + "=" * 50)
+    print("MODELOS DE NAIVE BAYES PARA CLASIFICACIÓN")
+    print("=" * 50)
+    nb_clf, nb_cm, nb_cr = naive_bayes_classification(
+        X_train_clf_scaled, X_test_clf_scaled, y_train_clf, y_test_clf, var_smoothing=1e-9
+    )
+
+    # Ajuste de hiperparámetros para Naive Bayes Clasificación
+    print("\n" + "=" * 50)
+    print("AJUSTE DE HIPERPARÁMETROS PARA NAIVE BAYES CLASIFICACIÓN")
+    print("=" * 50)
+    best_nb_clf, best_nb_cm, best_nb_cr = tune_naive_bayes_classification(
+        X_train_clf_scaled, X_test_clf_scaled, y_train_clf, y_test_clf
+    )
+
+    # Actualizar la información de modelos para la comparación
+    models_info.extend([
+        {'name': 'Naive Bayes (n_bins=15)', 'rmse': rmse_nb_reg, 'mae': mae_nb_reg, 'r2': r2_nb_reg},
+        {'name': 'Naive Bayes Ajustado', 'rmse': best_rmse_nb_reg, 'mae': best_mae_nb_reg, 'r2': best_r2_nb_reg}
+    ])
+    
     print("\nComparación de Modelos para Predicción:")
     compare_models(models_pred_info)
 
