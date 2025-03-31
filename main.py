@@ -15,9 +15,11 @@ from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, confusion_matrix, classification_report
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier, plot_tree
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
-from naive_bayes_models import naive_bayes_regression, naive_bayes_classification, tune_naive_bayes_regression, tune_naive_bayes_classification, naive_bayes_cross_validation
+from naive_bayes_models import naive_bayes_regression, naive_bayes_classification, tune_naive_bayes_regression, \
+    tune_naive_bayes_classification, naive_bayes_cross_validation
 
 import warnings
+
 warnings.filterwarnings('ignore')
 
 
@@ -153,11 +155,11 @@ def decision_tree_classifier(X_train, X_test, y_train, y_test, max_depth=None):
     mask = ~(X_train.isna().any(axis=1) | y_train.isna())
     X_train_clean = X_train[mask]
     y_train_clean = y_train[mask]
-    
+
     mask_test = ~(X_test.isna().any(axis=1) | y_test.isna())
     X_test_clean = X_test[mask_test]
     y_test_clean = y_test[mask_test]
-    
+
     dt_clf = DecisionTreeClassifier(max_depth=max_depth, random_state=42)
     dt_clf.fit(X_train_clean, y_train_clean)
     y_pred = dt_clf.predict(X_test_clean)
@@ -197,7 +199,8 @@ def random_forest_regression(X_train, X_test, y_train, y_test, n_estimators=100,
     mae = mean_absolute_error(y_test, y_pred)
     r2 = r2_score(y_test, y_pred)
 
-    print(f"Random Forest Regressor (n_estimators={n_estimators}, max_depth={max_depth}) - RMSE: {rmse:.2f}, MAE: {mae:.2f}, R²: {r2:.2f}")
+    print(
+        f"Random Forest Regressor (n_estimators={n_estimators}, max_depth={max_depth}) - RMSE: {rmse:.2f}, MAE: {mae:.2f}, R²: {r2:.2f}")
 
     plt.figure(figsize=(8, 6))
     plt.scatter(y_test, y_pred, color='darkgreen', alpha=0.6)
@@ -217,11 +220,11 @@ def random_forest_classifier(X_train, X_test, y_train, y_test, n_estimators=100,
     mask = ~(X_train.isna().any(axis=1) | y_train.isna())
     X_train_clean = X_train[mask]
     y_train_clean = y_train[mask]
-    
+
     mask_test = ~(X_test.isna().any(axis=1) | y_test.isna())
     X_test_clean = X_test[mask_test]
     y_test_clean = y_test[mask_test]
-    
+
     rf_clf = RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth, random_state=42)
     rf_clf.fit(X_train_clean, y_train_clean)
     y_pred = rf_clf.predict(X_test_clean)
@@ -257,6 +260,7 @@ def plot_train_test_R2(train_r2, test_r2):
     plt.ylabel('R²')
     plt.tight_layout()
     plt.show()
+
 
 def plot_real_vs_predicted(y_test, y_pred):
     """
@@ -296,6 +300,91 @@ def compare_models(models_info):
     plt.show()
 
     return comparison_df
+
+
+# ==================== NUEVAS GRÁFICAS ====================
+
+def plot_regression_metrics_comparison(models_info, save_path=None):
+    """
+    Genera un gráfico comparativo (subplots) de las métricas RMSE, MAE y R²
+    para los modelos de regresión.
+    Los modelos_info deben ser una lista de diccionarios con las llaves:
+      'name', 'rmse', 'mae', 'r2'
+    """
+    model_names = [info['name'] for info in models_info]
+    rmse_values = [info['rmse'] for info in models_info]
+    mae_values = [info['mae'] for info in models_info]
+    r2_values = [info['r2'] for info in models_info]
+
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+
+    sns.barplot(x=rmse_values, y=model_names, ax=axes[0], palette='viridis')
+    axes[0].set_title('RMSE')
+    axes[0].set_xlabel('RMSE')
+
+    sns.barplot(x=mae_values, y=model_names, ax=axes[1], palette='magma')
+    axes[1].set_title('MAE')
+    axes[1].set_xlabel('MAE')
+
+    sns.barplot(x=r2_values, y=model_names, ax=axes[2], palette='coolwarm')
+    axes[2].set_title('R²')
+    axes[2].set_xlabel('R²')
+    axes[2].set_xlim(0, 1)
+
+    fig.suptitle('Comparación de Métricas de Regresión', fontsize=16)
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
+    if save_path:
+        plt.savefig(save_path)
+    plt.show()
+
+
+def plot_cv_scores(cv_scores, save_path=None):
+    """
+    Genera un boxplot y un histograma de las puntuaciones obtenidas en la validación cruzada
+    para el modelo de Naïve Bayes en regresión.
+    """
+    plt.figure(figsize=(12, 5))
+
+    plt.subplot(1, 2, 1)
+    sns.boxplot(y=cv_scores, color='lightblue')
+    plt.title('Distribución de CV Scores (Boxplot)')
+    plt.ylabel('Puntuación (R²)')
+
+    plt.subplot(1, 2, 2)
+    sns.histplot(cv_scores, bins=10, kde=True, color='salmon')
+    plt.title('Distribución de CV Scores (Histograma)')
+    plt.xlabel('Puntuación (R²)')
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path)
+    plt.show()
+
+
+def plot_classification_accuracy_comparison(dt_cm, rf_cm, nb_cm, save_path=None):
+    """
+    Calcula la exactitud a partir de las matrices de confusión de tres modelos de clasificación
+    (Árbol de Decisión, Random Forest y Naïve Bayes) y genera un gráfico de barras comparativo.
+    """
+
+    def accuracy_from_cm(cm):
+        return np.trace(cm) / np.sum(cm)
+
+    dt_acc = accuracy_from_cm(dt_cm)
+    rf_acc = accuracy_from_cm(rf_cm)
+    nb_acc = accuracy_from_cm(nb_cm)
+
+    models = ['Árbol Decisión', 'Random Forest', 'Naïve Bayes']
+    accuracies = [dt_acc, rf_acc, nb_acc]
+
+    plt.figure(figsize=(8, 6))
+    sns.barplot(x=models, y=accuracies, palette='pastel')
+    plt.title('Comparación de Exactitud de Modelos de Clasificación')
+    plt.ylabel('Exactitud')
+    plt.ylim(0, 1)
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path)
+    plt.show()
 
 
 def plot_saleprice_distribution(df):
@@ -608,73 +697,16 @@ def main():
     print(f"  MAE: {comparison_df.loc[best_model_idx, 'MAE']:.2f}")
     print(f"  R²: {comparison_df.loc[best_model_idx, 'R²']:.3f}")
 
-    # -------------------------------------------------------------------------
-    # 12. Creación de la Variable Categórica para Clasificación
-    # -------------------------------------------------------------------------
-    print("\n" + "=" * 50)
-    print("CREACIÓN DE LA VARIABLE CATEGÓRICA (PriceCategory)")
-    print("=" * 50)
-    df_model = create_price_category(df_model, price_column='SalePrice')
-    print("Distribución de la nueva variable categórica:")
-    print(df_model['PriceCategory'].value_counts())
+    # NUEVA GRÁFICA: Comparación directa de métricas de regresión (se guardará como 'regression_metrics_comparison.png')
+    plot_regression_metrics_comparison(models_info, save_path='regression_metrics_comparison.png')
 
     # -------------------------------------------------------------------------
-    # 13. Árboles de Decisión para Predicción y Clasificación
+    # 12. Validación Cruzada para Naïve Bayes Regresión
     # -------------------------------------------------------------------------
-    # 13.1 Árbol de Decisión para Regresión
-    print("\n" + "=" * 50)
-    print("ÁRBOLES DE DECISIÓN PARA REGRESIÓN")
-    print("=" * 50)
-    depths = [3, 5, 7]
-    dt_reg_results = {}
-    for depth in depths:
-        dt_model, dt_rmse, dt_mae, dt_r2 = decision_tree_regression(X_train, X_test, y_train, y_test, max_depth=depth)
-        dt_reg_results[depth] = (dt_rmse, dt_mae, dt_r2)
-
-    # 13.2 Árbol de Decisión para Clasificación (usando PriceCategory)
-    print("\n" + "=" * 50)
-    print("ÁRBOLES DE DECISIÓN PARA CLASIFICACIÓN")
-    print("=" * 50)
-    X_clf = df_model[features_selected]
-    y_clf = df_model['PriceCategory']
-    X_train_clf, X_test_clf, y_train_clf, y_test_clf = train_test_split(X_clf, y_clf, test_size=0.2, random_state=42)
-    dt_clf, clf_cm, clf_cr = decision_tree_classifier(X_train_clf, X_test_clf, y_train_clf, y_test_clf, max_depth=5)
-
-    # -------------------------------------------------------------------------
-    # 14. Random Forest para Regresión y Clasificación
-    # -------------------------------------------------------------------------
-    print("\n" + "=" * 50)
-    print("RANDOM FOREST PARA REGRESIÓN")
-    print("=" * 50)
-    rf_reg, rf_rmse, rf_mae, rf_r2 = random_forest_regression(X_train, X_test, y_train, y_test, n_estimators=100, max_depth=7)
-
-    print("\n" + "=" * 50)
-    print("RANDOM FOREST PARA CLASIFICACIÓN")
-    print("=" * 50)
-    rf_clf, rf_cm, rf_cr = random_forest_classifier(X_train_clf, X_test_clf, y_train_clf, y_test_clf, n_estimators=100, max_depth=7)
-
-    # -------------------------------------------------------------------------
-    # 15. Comparación Final de Algoritmos para Predicción del Precio
-    # -------------------------------------------------------------------------
-    print("\n" + "=" * 50)
-    print("COMPARACIÓN FINAL DE ALGORITMOS PARA PREDICCIÓN DEL PRECIO")
-    print("=" * 50)
-    best_depth = min(dt_reg_results, key=lambda d: dt_reg_results[d][0])
-    best_dt_rmse, best_dt_mae, best_dt_r2 = dt_reg_results[best_depth]
-    print("\nResumen de Modelos para Predicción:")
-    print(f"Regresión Lineal Simple ({best_single_feature}): RMSE={rmse_simple:.2f}, MAE={mae_simple:.2f}, R²={r2_simple:.2f}")
-    print(f"Árbol de Decisión (max_depth={best_depth}): RMSE={best_dt_rmse:.2f}, MAE={best_dt_mae:.2f}, R²={best_dt_r2:.2f}")
-    print(f"Random Forest (max_depth=7): RMSE={rf_rmse:.2f}, MAE={rf_mae:.2f}, R²={rf_r2:.2f}")
-    models_pred_info = [
-        {'name': f'Regresión Simple ({best_single_feature})', 'rmse': rmse_simple, 'mae': mae_simple, 'r2': r2_simple},
-        {'name': f'Árbol de Decisión (max_depth={best_depth})', 'rmse': best_dt_rmse, 'mae': best_dt_mae, 'r2': best_dt_r2},
-        {'name': 'Random Forest', 'rmse': rf_rmse, 'mae': rf_mae, 'r2': rf_r2}
-    ]
-    
-    # Escalar características para Naive Bayes
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_test_scaled = scaler.transform(X_test)
+    # Escalar características para Naïve Bayes
+    scaler_cv = StandardScaler()
+    X_train_scaled = scaler_cv.fit_transform(X_train)
+    X_test_scaled = scaler_cv.transform(X_test)
 
     # Convertir arrays escalados de nuevo a DataFrames
     X_train_scaled = pd.DataFrame(X_train_scaled, columns=X_train.columns, index=X_train.index)
@@ -688,10 +720,13 @@ def main():
         X_train_scaled, X_test_scaled, y_train, y_test, n_bins=15, var_smoothing=1e-9
     )
 
-    # Validación cruzada para Naive Bayes Regresión
+    # Validación cruzada para Naïve Bayes Regresión
     cv_scores = naive_bayes_cross_validation(X, y, n_bins=15, var_smoothing=1e-9, cv=5)
+    print("Puntuaciones de Validación Cruzada (Naïve Bayes Regresión):", cv_scores)
+    # NUEVA GRÁFICA: Distribución de los CV Scores (se guardará como 'cv_scores_distribution.png')
+    plot_cv_scores(cv_scores, save_path='cv_scores_distribution.png')
 
-    # Ajuste de hiperparámetros para Naive Bayes Regresión
+    # Ajuste de hiperparámetros para Naïve Bayes Regresión
     print("\n" + "=" * 50)
     print("AJUSTE DE HIPERPARÁMETROS PARA NAIVE BAYES REGRESIÓN")
     print("=" * 50)
@@ -699,9 +734,90 @@ def main():
         X_train_scaled, X_test_scaled, y_train, y_test
     )
 
+    # -------------------------------------------------------------------------
+    # 13. Creación de la Variable Categórica para Clasificación
+    # -------------------------------------------------------------------------
+    print("\n" + "=" * 50)
+    print("CREACIÓN DE LA VARIABLE CATEGÓRICA (PriceCategory)")
+    print("=" * 50)
+    df_model = create_price_category(df_model, price_column='SalePrice')
+    print("Distribución de la nueva variable categórica:")
+    print(df_model['PriceCategory'].value_counts())
+
+    # -------------------------------------------------------------------------
+    # 14. Árboles de Decisión para Predicción y Clasificación
+    # -------------------------------------------------------------------------
+    # 14.1 Árbol de Decisión para Regresión
+    print("\n" + "=" * 50)
+    print("ÁRBOLES DE DECISIÓN PARA REGRESIÓN")
+    print("=" * 50)
+    depths = [3, 5, 7]
+    dt_reg_results = {}
+    for depth in depths:
+        dt_model, dt_rmse, dt_mae, dt_r2 = decision_tree_regression(X_train, X_test, y_train, y_test, max_depth=depth)
+        dt_reg_results[depth] = (dt_rmse, dt_mae, dt_r2)
+
+    # 14.2 Árbol de Decisión para Clasificación (usando PriceCategory)
+    print("\n" + "=" * 50)
+    print("ÁRBOLES DE DECISIÓN PARA CLASIFICACIÓN")
+    print("=" * 50)
+    X_clf = df_model[features_selected]
+    y_clf = df_model['PriceCategory']
+    X_train_clf, X_test_clf, y_train_clf, y_test_clf = train_test_split(X_clf, y_clf, test_size=0.2, random_state=42)
+    dt_clf, clf_cm, clf_cr = decision_tree_classifier(X_train_clf, X_test_clf, y_train_clf, y_test_clf, max_depth=5)
+
+    # -------------------------------------------------------------------------
+    # 15. Random Forest para Regresión y Clasificación
+    # -------------------------------------------------------------------------
+    print("\n" + "=" * 50)
+    print("RANDOM FOREST PARA REGRESIÓN")
+    print("=" * 50)
+    rf_reg, rf_rmse, rf_mae, rf_r2 = random_forest_regression(X_train, X_test, y_train, y_test, n_estimators=100,
+                                                              max_depth=7)
+
+    print("\n" + "=" * 50)
+    print("RANDOM FOREST PARA CLASIFICACIÓN")
+    print("=" * 50)
+    rf_clf, rf_cm, rf_cr = random_forest_classifier(X_train_clf, X_test_clf, y_train_clf, y_test_clf, n_estimators=100,
+                                                    max_depth=7)
+
+    # -------------------------------------------------------------------------
+    # 16. Comparación Final de Algoritmos para Predicción del Precio
+    # -------------------------------------------------------------------------
+    print("\n" + "=" * 50)
+    print("COMPARACIÓN FINAL DE ALGORITMOS PARA PREDICCIÓN DEL PRECIO")
+    print("=" * 50)
+    best_depth = min(dt_reg_results, key=lambda d: dt_reg_results[d][0])
+    best_dt_rmse, best_dt_mae, best_dt_r2 = dt_reg_results[best_depth]
+    print("\nResumen de Modelos para Predicción:")
+    print(
+        f"Regresión Lineal Simple ({best_single_feature}): RMSE={rmse_simple:.2f}, MAE={mae_simple:.2f}, R²={r2_simple:.2f}")
+    print(
+        f"Árbol de Decisión (max_depth={best_depth}): RMSE={best_dt_rmse:.2f}, MAE={best_dt_mae:.2f}, R²={best_dt_r2:.2f}")
+    print(f"Random Forest (max_depth=7): RMSE={rf_rmse:.2f}, MAE={rf_mae:.2f}, R²={rf_r2:.2f}")
+    models_pred_info = [
+        {'name': f'Regresión Simple ({best_single_feature})', 'rmse': rmse_simple, 'mae': mae_simple, 'r2': r2_simple},
+        {'name': f'Árbol de Decisión (max_depth={best_depth})', 'rmse': best_dt_rmse, 'mae': best_dt_mae,
+         'r2': best_dt_r2},
+        {'name': 'Random Forest', 'rmse': rf_rmse, 'mae': rf_mae, 'r2': rf_r2}
+    ]
+
+    # NUEVA GRÁFICA: Comparación directa de métricas de regresión incluyendo también los modelos NB,
+    # se sugiere nombrarla "regression_metrics_comparison.png"
+    # Para incluir los modelos NB, puedes extender la lista models_pred_info con:
+    models_pred_info.extend([
+        {'name': 'Naive Bayes (n_bins=15)', 'rmse': rmse_nb_reg, 'mae': mae_nb_reg, 'r2': r2_nb_reg},
+        {'name': 'Naive Bayes Ajustado', 'rmse': best_rmse_nb_reg, 'mae': best_mae_nb_reg, 'r2': best_r2_nb_reg}
+    ])
+    plot_regression_metrics_comparison(models_pred_info, save_path='regression_metrics_comparison.png')
+
+    # -------------------------------------------------------------------------
+    # 17. Naive Bayes para Clasificación y Comparación de Exactitud
+    # -------------------------------------------------------------------------
     # Escalar características para clasificación
-    X_train_clf_scaled = scaler.fit_transform(X_train_clf)
-    X_test_clf_scaled = scaler.transform(X_test_clf)
+    scaler_clf = StandardScaler()
+    X_train_clf_scaled = scaler_clf.fit_transform(X_train_clf)
+    X_test_clf_scaled = scaler_clf.transform(X_test_clf)
 
     # Convertir arrays escalados de nuevo a DataFrames
     X_train_clf_scaled = pd.DataFrame(X_train_clf_scaled, columns=X_train_clf.columns, index=X_train_clf.index)
@@ -723,14 +839,11 @@ def main():
         X_train_clf_scaled, X_test_clf_scaled, y_train_clf, y_test_clf
     )
 
-    # Actualizar la información de modelos para la comparación
-    models_info.extend([
-        {'name': 'Naive Bayes (n_bins=15)', 'rmse': rmse_nb_reg, 'mae': mae_nb_reg, 'r2': r2_nb_reg},
-        {'name': 'Naive Bayes Ajustado', 'rmse': best_rmse_nb_reg, 'mae': best_mae_nb_reg, 'r2': best_r2_nb_reg}
-    ])
-    
-    print("\nComparación de Modelos para Predicción:")
-    compare_models(models_pred_info)
+    # NUEVA GRÁFICA: Comparación de exactitud de modelos de clasificación.
+    # Se calculará la exactitud a partir de las matrices de confusión de:
+    # Árbol de Decisión (dt_clf), Random Forest (rf_clf) y Naïve Bayes (nb_clf)
+    # Se sugiere nombrar esta gráfica "classification_accuracy_comparison.png"
+    plot_classification_accuracy_comparison(clf_cm, rf_cm, nb_cm, save_path='classification_accuracy_comparison.png')
 
 
 if __name__ == '__main__':
