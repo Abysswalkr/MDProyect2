@@ -206,6 +206,11 @@ def nb_classification(X_train, X_test, y_train, y_test, var_smoothing=1e-9, save
     cm = confusion_matrix(y_test, y_pred)
     acc = accuracy_score(y_test, y_pred)
 
+    plot_confusion_matrix(cm, classes=np.unique(y_test),
+                          title='Matriz de Confusión - NB Clasificación',
+                          filename='Gráficas/NB_classification_confusion_matrix.png',
+                          save_plots=save_plots)
+
     plt.figure(figsize=(8, 6))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
     plt.title('Matriz de Confusión - NB Clasificación')
@@ -382,6 +387,20 @@ def nb_classification_hyperparameter_tuning(X_train, X_test, y_train, y_test, vs
         plt.savefig('NB_classification_hyperparameter_tuning.png')
     plt.show()
 
+# --------------------- Funciones de Ploteo ---------------------
+def plot_confusion_matrix(cm, classes, title, filename, save_plots=True):
+    """
+    Genera y muestra una matriz de confusión con etiquetas para las clases.
+    """
+    plt.figure(figsize=(8,6))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=classes, yticklabels=classes)
+    plt.title(title)
+    plt.xlabel('Predicción')
+    plt.ylabel('Valor Real')
+    plt.tight_layout()
+    if save_plots:
+        plt.savefig(filename)
+    plt.show()
 
 # --------------------- Main ---------------------
 def main():
@@ -420,21 +439,43 @@ def main():
     # ---------------- Actividad 4 y 10: NB Clasificación ----------------
     print("Actividad 4 y 10: Modelo de Clasificación con Naïve Bayes")
     nb_clf_acc, nb_cm = nb_classification(X_train_clf, X_test_clf, y_train_clf, y_test_clf)
-    # Entrenar otros clasificadores para comparar exactitud
+
+    # Entrenar y plotear matriz de confusión para Árbol de Decisión
     dt_clf = DecisionTreeClassifier(max_depth=5, random_state=42)
     dt_clf.fit(X_train_clf, y_train_clf)
     y_pred_dt = dt_clf.predict(X_test_clf)
+    cm_dt = confusion_matrix(y_test_clf, y_pred_dt)
     acc_dt = accuracy_score(y_test_clf, y_pred_dt)
+    plot_confusion_matrix(cm_dt, classes=np.unique(y_test_clf),
+                          title='Matriz de Confusión - Árbol de Decisión Clasificación',
+                          filename='Gráficas/DT_classification_confusion_matrix.png',
+                          save_plots=True)
 
+    # Entrenar y plotear matriz de confusión para Random Forest
     rf_clf = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
     rf_clf.fit(X_train_clf, y_train_clf)
     y_pred_rf = rf_clf.predict(X_test_clf)
+    cm_rf = confusion_matrix(y_test_clf, y_pred_rf)
     acc_rf = accuracy_score(y_test_clf, y_pred_rf)
+    plot_confusion_matrix(cm_rf, classes=np.unique(y_test_clf),
+                          title='Matriz de Confusión - Random Forest Clasificación',
+                          filename='Gráficas/RF_classification_confusion_matrix.png',
+                          save_plots=True)
 
+    # También, se puede generar un gráfico comparativo de exactitud entre modelos
     acc_dict = {'Naïve Bayes': nb_clf_acc,
                 'Árbol de Decisión': acc_dt,
                 'Random Forest': acc_rf}
-    plot_classification_accuracy_comparison(acc_dict)
+    modelos = list(acc_dict.keys())
+    accuracies = [acc_dict[m] for m in modelos]
+    plt.figure(figsize=(8, 6))
+    sns.barplot(x=modelos, y=accuracies, palette='pastel')
+    plt.title('Comparación de Exactitud - Clasificación')
+    plt.ylabel('Exactitud')
+    plt.ylim(0, 1)
+    plt.tight_layout()
+    plt.savefig('classification_accuracy_comparison.png')
+    plt.show()
 
     # ---------------- Actividad 7: Análisis de Sobreajuste ----------------
     print("Actividad 7: Análisis de Sobreajuste")
